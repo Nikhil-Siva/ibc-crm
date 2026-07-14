@@ -471,6 +471,61 @@ test('POST /api/contact-imports/process — validation failure returns 400', asy
   assert.equal(status, 400);
 });
 
+// Regression: uploadContacts previously wrote to local disk via multer, which
+// doesn't survive a redeploy on an ephemeral filesystem (Render's free tier).
+// It now buffers in memory and persists via services/fileStorage.js, falling
+// back to local disk when CLOUDINARY_URL is unset (as in this test run) — this
+// exercises that whole path, upload through to leads actually landing in the DB.
+test('contact-imports — full upload → process flow creates leads', async () => {
+  // Unique per run — a static number accumulates duplicate rows across
+  // repeated local test runs against a persistent dev database, since search
+  // matches every prior run's leftover row too.
+  const mobile = `98${Date.now().toString().slice(-8)}`;
+  const csv = `Name,Mobile\nImport Test Lead,${mobile}\n`;
+  const form = new FormData();
+  form.append('file', new Blob([csv], { type: 'text/csv' }), 'import-test.csv');
+
+  const upload = await request('POST', '/api/contact-imports/upload', {
+    token: adminToken,
+    body: form,
+    raw: true,
+  });
+  assert.equal(upload.status, 200);
+  assert.deepEqual(upload.body.data.headers, ['Name', 'Mobile']);
+  assert.equal(upload.body.data.total_rows, 1);
+
+  const importId = upload.body.data.id;
+
+  // The stored file must be independently retrievable — this is the part that
+  // breaks if a host's disk doesn't survive between the two requests.
+  const detail = await request('GET', `/api/contact-imports/${importId}`, { token: adminToken });
+  assert.ok(detail.body.data.file_path, 'expected a stored file location');
+
+  const process = await request('POST', '/api/contact-imports/process', {
+    token: adminToken,
+    body: { importId, mapping: { Name: 'name', Mobile: 'mobile' } },
+  });
+  assert.equal(process.status, 200);
+  assert.equal(process.body.data.success_rows, 1);
+  assert.equal(process.body.data.failed_rows, 0);
+
+  const created = await request('GET', `/api/leads?search=${mobile}`, { token: adminToken });
+  assert.equal(created.body.data.rows.length, 1);
+  assert.equal(created.body.data.rows[0].mobile, mobile);
+});
+
+test('contact-imports upload — rejects a non-spreadsheet file', async () => {
+  const form = new FormData();
+  form.append('file', new Blob(['not a spreadsheet'], { type: 'text/plain' }), 'notes.txt');
+
+  const { status } = await request('POST', '/api/contact-imports/upload', {
+    token: adminToken,
+    body: form,
+    raw: true,
+  });
+  assert.equal(status, 400);
+});
+
 test('GET /api/contact-imports — agent is forbidden', async () => {
   const { status } = await request('GET', '/api/contact-imports', { token: agent.token });
   assert.equal(status, 403);

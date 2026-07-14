@@ -1,4 +1,4 @@
-const path = require('path');
+const { Readable } = require('stream');
 const ExcelJS = require('exceljs');
 
 /**
@@ -44,26 +44,32 @@ const cellToPrimitive = (value) => {
 /**
  * Read a spreadsheet into an array-of-arrays (row 0 = headers), matching the
  * shape the old XLSX.utils.sheet_to_json(sheet, { header: 1 }) produced.
+ *
+ * Takes an in-memory Buffer, not a file path — contact-import files may live
+ * on local disk (dev/VPS) or in cloud storage (see services/fileStorage.js),
+ * and reading from a Buffer works identically either way with zero temp-file
+ * handling. `ext` is required because a Buffer carries no filename.
  */
-const readRows = async (filePath) => {
-  const ext = path.extname(filePath).toLowerCase();
+const readRows = async (buffer, ext) => {
+  const normalizedExt = (ext || '').toLowerCase();
 
-  if (LEGACY_EXTENSIONS.includes(ext)) {
+  if (LEGACY_EXTENSIONS.includes(normalizedExt)) {
     throw new UnsupportedFormatError(
       'Legacy .xls files are not supported. Please re-save the file as .xlsx or .csv and upload again.'
     );
   }
 
-  if (!SUPPORTED_EXTENSIONS.includes(ext)) {
+  if (!SUPPORTED_EXTENSIONS.includes(normalizedExt)) {
     throw new UnsupportedFormatError('Only .xlsx and .csv files are supported.');
   }
 
   const workbook = new ExcelJS.Workbook();
 
-  if (ext === '.csv') {
-    await workbook.csv.readFile(filePath);
+  if (normalizedExt === '.csv') {
+    // csv.read wants a stream, not a Buffer.
+    await workbook.csv.read(Readable.from(buffer));
   } else {
-    await workbook.xlsx.readFile(filePath);
+    await workbook.xlsx.load(buffer);
   }
 
   const worksheet = workbook.worksheets[0];

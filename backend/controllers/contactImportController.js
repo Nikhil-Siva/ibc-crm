@@ -3,8 +3,8 @@ const { sequelize } = require('../models');
 const { ContactImportLog, Lead, User } = require('../models');
 const { pick, LEAD_WRITABLE } = require('../utils/validation');
 const path = require('path');
-const fs = require('fs');
 const { readRows, UnsupportedFormatError } = require('../utils/spreadsheet');
+const fileStorage = require('../services/fileStorage');
 
 const uploadContacts = async (req, res) => {
   try {
@@ -12,12 +12,13 @@ const uploadContacts = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const filePath = req.file.path;
+    // Memory storage (middleware/importUpload.js) — nothing is written to disk
+    // until validation passes, so a rejected upload never leaves a stray file.
+    const buffer = req.file.buffer;
     const originalName = req.file.originalname;
     const ext = path.extname(originalName).toLowerCase();
 
     if (!['.xlsx', '.csv'].includes(ext)) {
-      fs.unlinkSync(filePath);
       return res.status(400).json({
         success: false,
         message: ext === '.xls'
@@ -28,9 +29,8 @@ const uploadContacts = async (req, res) => {
 
     let jsonData;
     try {
-      jsonData = await readRows(filePath);
+      jsonData = await readRows(buffer, ext);
     } catch (parseError) {
-      fs.unlinkSync(filePath);
       if (parseError instanceof UnsupportedFormatError) {
         return res.status(400).json({ success: false, message: parseError.message });
       }
@@ -38,22 +38,27 @@ const uploadContacts = async (req, res) => {
     }
 
     if (!jsonData || jsonData.length === 0) {
-      fs.unlinkSync(filePath);
       return res.status(400).json({ success: false, message: 'File is empty or unreadable' });
     }
 
     if (!Array.isArray(jsonData[0])) {
-      fs.unlinkSync(filePath);
       return res.status(400).json({ success: false, message: 'First row must be a header row' });
     }
 
     const headers = jsonData[0].map(h => (h ? String(h).trim() : ''));
     const totalRows = jsonData.length - 1;
 
+    // Only now — after the file has proven parseable — is it persisted, so
+    // processImport (a later, separate request) can read it back. On a host
+    // with an ephemeral filesystem (e.g. Render's free tier) this goes to
+    // Cloudinary when CLOUDINARY_URL is set; otherwise it falls back to local
+    // disk, unchanged from before.
+    const { location } = await fileStorage.storeBuffer(buffer, { filename: originalName, folder: 'imports' });
+
     // error_log and headers are JSON columns — Sequelize serialises them.
     const importLog = await ContactImportLog.create({
       filename: originalName,
-      file_path: filePath,
+      file_path: location,
       total_rows: totalRows,
       success_rows: 0,
       failed_rows: 0,
@@ -96,14 +101,25 @@ const processImport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This import has already been processed' });
     }
 
-    const filePath = importLog.file_path;
-    if (!filePath || !fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'Uploaded file not found on disk' });
+    if (!importLog.file_path) {
+      return res.status(404).json({ success: false, message: 'Uploaded file not found.' });
     }
+
+    let buffer;
+    try {
+      buffer = await fileStorage.fetchBuffer(importLog.file_path);
+    } catch (fetchError) {
+      console.error('processImport fetchBuffer error:', fetchError.message);
+      return res.status(404).json({ success: false, message: 'Uploaded file could not be retrieved.' });
+    }
+
+    // The stored location may be a Cloudinary URL, which carries no reliable
+    // file extension — the original filename is the source of truth for that.
+    const ext = path.extname(importLog.filename || '').toLowerCase();
 
     let jsonData;
     try {
-      jsonData = await readRows(filePath);
+      jsonData = await readRows(buffer, ext);
     } catch (parseError) {
       return res.status(400).json({ success: false, message: 'File could not be parsed as a spreadsheet.' });
     }

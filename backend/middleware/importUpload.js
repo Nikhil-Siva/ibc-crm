@@ -1,26 +1,12 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 
-// Ensure imports directory exists
-const importsDir = path.join(__dirname, '..', 'uploads', 'imports');
-if (!fs.existsSync(importsDir)) {
-  fs.mkdirSync(importsDir, { recursive: true });
-}
-
-// Disk storage for imported files
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, importsDir);
-  },
-  filename: (req, file, cb) => {
-    // originalname is attacker-controlled and may contain path separators —
-    // keep only the extension and generate the rest.
-    const ext = path.extname(file.originalname).toLowerCase().slice(0, 10);
-    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
-  },
-});
+/**
+ * Memory storage: the controller decides where the bytes end up (Cloudinary
+ * or local disk — see services/fileStorage.js), rather than multer writing
+ * straight to a local path that may not survive a redeploy.
+ */
+const storage = multer.memoryStorage();
 
 // File filter – allow only Excel and CSV
 const fileFilter = (req, file, cb) => {
@@ -44,7 +30,14 @@ const fileFilter = (req, file, cb) => {
   if (allowedExtensions.includes(ext) && typeOk) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only .xlsx and .csv files are allowed.'), false);
+    // A fileFilter rejection isn't a MulterError (that's only for multer's own
+    // internal errors), so the global handler's MulterError branch never
+    // catches it — it fell through to the generic 500 branch even though this
+    // is squarely a client error. statusCode is a generic convention the
+    // global handler checks for any thrown error.
+    const error = new Error('Invalid file type. Only .xlsx and .csv files are allowed.');
+    error.statusCode = 400;
+    cb(error, false);
   }
 };
 

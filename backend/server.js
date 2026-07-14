@@ -23,6 +23,7 @@ const agentsRoutes = require('./routes/agents');
 const reportsRoutes = require('./routes/reports');
 const usersRoutes = require('./routes/users');
 const notesRoutes = require('./routes/notes');
+const cronRoutes = require('./routes/cron');
 
 // ─── NeoDove Route Imports ──────────────────────────────────────────
 const adminDashboardRoutes = require('./routes/admin-dashboard');
@@ -177,6 +178,12 @@ app.get('/api/ready', async (req, res) => {
 // ─── Public Webhook Endpoint (no auth) ──────────────────────────────
 app.post('/api/webhooks/incoming/:webhookId', webhookLimiter, handleWebhook);
 
+// ─── External Cron Trigger (shared-secret auth, not a user session) ──
+// See routes/cron.js and DEPLOY_FREE.md — lets a free external scheduler
+// (e.g. cron-job.org) drive the reminder jobs on hosts where the process
+// itself sleeps when idle, so in-process node-cron can't be relied on alone.
+app.use('/api/cron', cronRoutes);
+
 // ─── Mount Routes ────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', apiLimiter);
@@ -222,17 +229,29 @@ app.use((err, req, res, next) => {
     orgId: req.user?.org_id,
   });
 
-  // Multer file size error
+  // Multer file size error. Two multer instances share this handler with
+  // different limits (documents: 5MB, spreadsheet imports: 50MB) — the
+  // message can't hardcode a size without being wrong for one of them.
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
       success: false,
-      message: 'File too large. Maximum size is 5MB.',
+      message: 'File too large.',
     });
   }
 
   // Multer general error
   if (err.name === 'MulterError') {
     return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  // A fileFilter rejection (e.g. wrong file type) isn't a MulterError — it's
+  // whatever error the filter constructed. statusCode is the generic
+  // convention for "this error already knows its HTTP status."
+  if (err.statusCode) {
+    return res.status(err.statusCode).json({
       success: false,
       message: err.message,
     });

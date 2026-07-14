@@ -18,3 +18,11 @@ services:
       #   ENCRYPTION_KEY   — 32-byte hex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
       #   FRONTEND_URL     — your Vercel URL, e.g. https://your-app.vercel.app
       #   TRUST_PROXY      — 1
+      #   CLOUDINARY_URL   — from Cloudinary dashboard, keeps contact-import
+      #                      uploads alive across redeploys (Render's disk is
+      #                      ephemeral). Omit and uploads still work, but a
+      #                      redeploy between "upload" and "map & import" loses
+      #                      the file.
+      #   CRON_SECRET      — 32-byte hex, enables POST /api/cron/run/:job so an
+      #                      external scheduler can drive reminders while this
+      #                      free instance is asleep. See DEPLOY_FREE.md.

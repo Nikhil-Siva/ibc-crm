@@ -42,6 +42,10 @@ jobs:
       # cap would fail the run rather than catch an attack.
       RATE_LIMIT_AUTH_MAX: 500
       LOG_LEVEL: warn
+      # CI-only secret, exercises the /api/cron/run/:job happy path.
+      CRON_SECRET: ci_only_cron_secret_do_not_use_in_prod
+      # Deliberately unset: CI exercises the local-disk upload fallback, the
+      # same path any deployment without Cloudinary configured takes.
 
     steps:
       - uses: actions/checkout@v4
