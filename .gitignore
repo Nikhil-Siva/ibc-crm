@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build output
+frontend/dist/
+build/
+
+# Uploads (user data)
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+*.local.json

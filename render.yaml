@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: insurance-crm-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run migrate
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT automatically — don't set it here.
+      # Set the rest in the Render dashboard (Environment tab) — they're
+      # secrets and don't belong in a file committed to the repo:
+      #   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD  (from Clever Cloud)
+      #   JWT_SECRET       — 32+ chars: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+      #   ENCRYPTION_KEY   — 32-byte hex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      #   FRONTEND_URL     — your Vercel URL, e.g. https://your-app.vercel.app
+      #   TRUST_PROXY      — 1

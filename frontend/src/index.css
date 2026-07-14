@@ -1,0 +1,870 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import './styles/tokens.css';
+
+/**
+ * Global styles.
+ *
+ * Everything reads from styles/tokens.css. The previous sheet carried 46
+ * gradients, 40 box-shadows and ~500 hardcoded hex values; separation now
+ * comes from whitespace and a single hairline border rather than from boxes,
+ * elevation and colour.
+ *
+ * Font weights loaded: 400/500/600. The old sheet pulled six (300–800) and
+ * used the extremes decoratively.
+ */
+
+/* ===== RESET & BASE ===== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: var(--t-base);
+  line-height: var(--lh-base);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-neutral-300);
+  border-radius: var(--r-full);
+  border: 3px solid var(--c-bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-neutral-400);
+}
+
+/* ===== SIDEBAR ===== */
+/* Light, not a dark navy slab: navigation is a quiet index, not a feature. */
+.sidebar-container {
+  background: var(--c-neutral-50) !important;
+  border-right: 1px solid var(--c-border);
+  min-height: 100vh;
+}
+
+.sidebar-container .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s-4);
+  height: var(--topbar-h);
+  margin-bottom: var(--s-2);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-logo .logo-text {
+  font-size: var(--t-base);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  color: var(--c-text);
+  white-space: nowrap;
+  /* Was gradient-clipped text. */
+  text-transform: none;
+}
+
+.sidebar-logo .logo-full {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sidebar-logo .logo-subtitle {
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: var(--lh-tight);
+}
+
+.sidebar-menu {
+  flex: 1;
+  border-inline-end: none !important;
+  background: transparent !important;
+  padding: 0 var(--s-2);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-menu .ant-menu-item,
+.sidebar-menu .ant-menu-submenu-title {
+  margin: 1px 0 !important;
+  width: 100% !important;
+  border-radius: var(--r-md);
+  font-weight: var(--fw-regular);
+  font-size: var(--t-base);
+  color: var(--c-text-secondary);
+  height: 36px !important;
+  line-height: 36px !important;
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.sidebar-menu .ant-menu-item:hover,
+.sidebar-menu .ant-menu-submenu-title:hover {
+  background: var(--c-neutral-100) !important;
+  color: var(--c-text) !important;
+}
+
+/* The only place the accent appears in the nav. */
+.sidebar-menu .ant-menu-item-selected {
+  background: var(--c-accent-subtle) !important;
+  color: var(--c-accent) !important;
+  font-weight: var(--fw-medium);
+}
+
+.sidebar-menu .ant-menu-item-selected .anticon {
+  color: var(--c-accent) !important;
+}
+
+.sidebar-menu .ant-menu-item .anticon,
+.sidebar-menu .ant-menu-submenu-title .anticon {
+  font-size: 16px;
+}
+
+.sidebar-version {
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+/* ===== TOPBAR ===== */
+/* A hairline instead of a shadow — separates without floating. */
+.topbar {
+  background: var(--c-bg) !important;
+  padding: 0 var(--s-5) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--c-border);
+  height: var(--topbar-h);
+  line-height: normal;
+  z-index: 10;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.topbar-left .page-title {
+  font-size: var(--t-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+  line-height: var(--lh-tight);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+
+.topbar-right .greeting-text {
+  font-size: var(--t-sm);
+  color: var(--c-text-secondary);
+  font-weight: var(--fw-regular);
+}
+
+.topbar-right .greeting-text strong {
+  color: var(--c-text);
+  font-weight: var(--fw-medium);
+}
+
+.notification-bell {
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--c-text-secondary);
+  padding: var(--s-2);
+  border-radius: var(--r-md);
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.notification-bell:hover {
+  color: var(--c-text);
+  background: var(--c-neutral-100);
+}
+
+.user-avatar-dropdown {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-md);
+  transition: background var(--motion-fast);
+}
+
+.user-avatar-dropdown:hover {
+  background: var(--c-neutral-100);
+}
+
+.user-avatar-dropdown .user-name {
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+  line-height: var(--lh-tight);
+}
+
+.user-avatar-dropdown .user-role {
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+  text-transform: capitalize;
+  line-height: var(--lh-tight);
+}
+
+/* ===== CONTENT ===== */
+.main-content {
+  padding: var(--s-5);
+  min-height: calc(100vh - var(--topbar-h));
+  background: var(--c-bg);
+}
+
+.content-footer {
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: var(--t-xs);
+  background: transparent;
+  padding: var(--s-5);
+  border-top: 1px solid var(--c-border);
+}
+
+.page-container {
+  /* Was a 0.5s fade on every navigation. */
+  animation: none;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-5);
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.page-header-title {
+  font-size: var(--t-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  color: var(--c-text);
+}
+
+/* Was an 18px/700 title with a gradient bar glued to its left edge. */
+.section-title {
+  font-size: var(--t-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  color: var(--c-text);
+  margin-bottom: var(--s-4);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Filters sit on the page, not in a floating panel. */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-4);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ===== CARDS ===== */
+/* Flat by default: a card groups content, it isn't an object on a desk. */
+.ant-card {
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: none !important;
+}
+
+.ant-card-head {
+  border-bottom: 1px solid var(--c-border) !important;
+  min-height: auto !important;
+  padding: var(--s-4) var(--s-5) !important;
+}
+
+.ant-card-head-title {
+  font-size: var(--t-base) !important;
+  font-weight: var(--fw-semibold) !important;
+  color: var(--c-text) !important;
+  padding: 0 !important;
+}
+
+.chart-card {
+  border-radius: var(--r-md) !important;
+}
+
+/* ===== KPI ===== */
+/* Was 8 saturated gradient variants that lifted 6px on hover. The figure is
+   the data; the container shouldn't compete with it. */
+.kpi-card {
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: none !important;
+  background: var(--c-surface);
+  transition: none;
+}
+
+.kpi-card:hover {
+  transform: none;
+  box-shadow: none !important;
+}
+
+.kpi-card .ant-card-body {
+  padding: var(--s-4) var(--s-5);
+}
+
+/* Decorative watermark at 15% opacity — carried no information. */
+.kpi-card .kpi-icon {
+  display: none;
+}
+
+.kpi-card .ant-statistic-title {
+  color: var(--c-text-secondary) !important;
+  font-size: var(--t-xs);
+  font-weight: var(--fw-regular);
+  margin-bottom: var(--s-1);
+}
+
+.kpi-card .ant-statistic-content {
+  color: var(--c-text) !important;
+}
+
+.kpi-card .ant-statistic-content-value {
+  font-weight: var(--fw-semibold);
+  font-size: var(--t-xl);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-card .ant-statistic-content-prefix {
+  /* The icon was competing with the number for attention. */
+  color: var(--c-text-muted);
+  font-size: var(--t-base);
+  margin-inline-end: var(--s-2);
+}
+
+.kpi-card .ant-statistic-content-suffix {
+  font-size: var(--t-sm);
+  color: var(--c-text-secondary);
+}
+
+/* Hand-built KPI tiles (Dashboard) — same rhythm as the AntD Statistic ones. */
+.kpi-label {
+  font-size: var(--t-xs);
+  color: var(--c-text-secondary);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--s-2);
+}
+
+.kpi-value {
+  font-size: var(--t-xl);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-trend {
+  margin-top: var(--s-2);
+  font-size: var(--t-xs);
+  min-height: 18px;
+}
+
+/* ===== QUICK ACTIONS ===== */
+/* A real <button>: it's a control, so it should be focusable and announced as
+   one. The previous version was a clickable Card. */
+.quick-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--t-sm);
+  color: var(--c-text);
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+
+.quick-action:hover {
+  background: var(--c-neutral-50);
+  border-color: var(--c-border-strong);
+}
+
+.quick-action-icon {
+  font-size: 16px;
+  color: var(--c-text-secondary);
+  flex-shrink: 0;
+}
+
+.quick-action-label {
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-tight);
+}
+
+/* ===== STATUS ===== */
+/* Muted fills, no borders: reads as a label, not a warning light. */
+.status-new        { color: var(--c-info);        background: var(--c-info-bg);        border-color: transparent; }
+.status-interested { color: var(--c-accent);      background: var(--c-accent-subtle);  border-color: transparent; }
+.status-followup   { color: var(--c-warning);     background: var(--c-warning-bg);     border-color: transparent; }
+.status-proposal   { color: var(--c-info);        background: var(--c-info-bg);        border-color: transparent; }
+.status-document   { color: var(--c-info);        background: var(--c-info-bg);        border-color: transparent; }
+.status-payment    { color: var(--c-warning);     background: var(--c-warning-bg);     border-color: transparent; }
+.status-won        { color: var(--c-success);     background: var(--c-success-bg);     border-color: transparent; }
+.status-lost       { color: var(--c-danger);      background: var(--c-danger-bg);      border-color: transparent; }
+.status-junk       { color: var(--c-text-muted);  background: var(--c-neutral-100);    border-color: transparent; }
+
+.priority-hot  { color: var(--c-danger);  font-weight: var(--fw-medium); }
+.priority-warm { color: var(--c-warning); font-weight: var(--fw-medium); }
+.priority-cold { color: var(--c-text-secondary); font-weight: var(--fw-medium); }
+
+/* ===== TABLES ===== */
+/* Density is preserved on purpose: a rep scanning 200 leads needs rows close
+   together. Zebra stripes and uppercase headers are gone; the hairline and
+   alignment do the work instead. */
+.premium-table .ant-table {
+  font-size: var(--t-sm);
+}
+
+.premium-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: var(--c-text-secondary);
+  font-weight: var(--fw-medium);
+  font-size: var(--t-xs);
+  text-transform: none;
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--c-border-strong) !important;
+  padding: var(--s-2) var(--s-3) !important;
+  white-space: nowrap;
+}
+
+/* AntD's vertical column divider. */
+.premium-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.premium-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--c-border);
+  padding: var(--s-2) var(--s-3);
+}
+
+.premium-table .ant-table-tbody > tr:nth-child(even) {
+  background: transparent;
+}
+
+.premium-table .ant-table-tbody > tr:hover > td {
+  background: var(--c-neutral-50) !important;
+}
+
+/* Figures line up when they share a width. */
+.premium-table .tabular,
+.ant-statistic-content-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Row states are the one place colour still raises its voice — they mean
+   "this needs action today". */
+.row-overdue { background: var(--c-danger-bg) !important; }
+.row-warning,
+.row-soon,
+.row-due-soon { background: var(--c-warning-bg) !important; }
+.row-due-month { background: var(--c-neutral-50) !important; }
+
+/* ===== FORMS ===== */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  box-shadow: var(--focus-ring) !important;
+}
+
+/* Visible focus is an accessibility requirement, not decoration. */
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
+/* ===== BUTTONS ===== */
+.ant-btn {
+  box-shadow: none !important;
+  font-weight: var(--fw-medium);
+}
+
+.ant-btn-primary {
+  background: var(--c-accent);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--c-accent-hover) !important;
+}
+
+/* ===== TABS ===== */
+.ant-tabs-tab {
+  font-size: var(--t-base);
+  padding: var(--s-2) 0 !important;
+}
+
+.ant-tabs-nav::before {
+  border-bottom: 1px solid var(--c-border) !important;
+}
+
+/* ===== AUTH PAGES ===== */
+/* Was an infinitely animating gradient with two counter-rotating radial
+   overlays. A login form is a doorway; it shouldn't perform. */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-neutral-50);
+  padding: var(--s-5);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--c-border) !important;
+  background: var(--c-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+.login-card .ant-card-body {
+  padding: var(--s-6);
+}
+
+.login-header {
+  text-align: left;
+  margin-bottom: var(--s-6);
+}
+
+.login-header .brand-name {
+  font-size: var(--t-lg);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0;
+  color: var(--c-text);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--s-1);
+  /* Was gradient-clipped text with a fadeInDown animation. */
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+
+.login-header .brand-subtitle {
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: var(--fw-regular);
+}
+
+.login-header .brand-tagline {
+  font-size: var(--t-sm);
+  color: var(--c-text-secondary);
+  margin-top: var(--s-3);
+}
+
+.login-form .ant-input-affix-wrapper,
+.login-form .ant-input {
+  border-radius: var(--r-md);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border-strong);
+}
+
+.login-form .ant-input-affix-wrapper:hover {
+  border-color: var(--c-accent);
+}
+
+.login-form .ant-btn-primary {
+  height: 40px;
+  border-radius: var(--r-md);
+  font-size: var(--t-base);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  background: var(--c-accent);
+  border: none;
+  box-shadow: none;
+}
+
+.login-form .ant-btn-primary:hover {
+  transform: none;
+  background: var(--c-accent-hover);
+  box-shadow: none;
+}
+
+.demo-credentials {
+  margin-top: var(--s-5);
+  padding: var(--s-3);
+  background: var(--c-neutral-50);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  text-align: left;
+}
+
+.demo-credentials .demo-title {
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: var(--s-1);
+}
+
+.demo-credentials code {
+  font-size: var(--t-xs);
+  color: var(--c-text);
+  background: var(--c-neutral-100);
+  padding: 1px var(--s-1);
+  border-radius: var(--r-sm);
+}
+
+/* ===== PIPELINE / KANBAN ===== */
+/* Density preserved: the board is the product for a telecaller. */
+.pipeline-container {
+  display: flex;
+  gap: var(--s-3);
+  overflow-x: auto;
+  padding-bottom: var(--s-4);
+  min-height: calc(100vh - 250px);
+}
+
+.pipeline-column {
+  min-width: 280px;
+  max-width: 320px;
+  flex-shrink: 0;
+  background: var(--c-neutral-50);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+}
+
+.pipeline-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s-1) var(--s-3);
+  margin-bottom: var(--s-1);
+  border-radius: 0;
+  font-weight: var(--fw-medium);
+  font-size: var(--t-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--c-text);
+}
+
+.pipeline-column-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 100px;
+}
+
+.pipeline-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  padding: var(--s-3);
+  box-shadow: none;
+  cursor: grab;
+  transition: border-color var(--motion-fast);
+}
+
+.pipeline-card:hover {
+  border-color: var(--c-border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Dragging is the one case where elevation is functional: the card really is
+   lifted off the board and following the cursor. */
+.pipeline-card.dragging {
+  opacity: 0.9;
+  box-shadow: var(--shadow-overlay);
+  transform: none; /* was rotate(2deg) */
+}
+
+.pipeline-card .card-name {
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+  margin-bottom: var(--s-1);
+}
+
+.pipeline-card .card-mobile {
+  font-size: var(--t-xs);
+  color: var(--c-text-secondary);
+  margin-bottom: var(--s-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.pipeline-card .card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--s-2);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--c-border);
+}
+
+.empty-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-5);
+  color: var(--c-text-muted);
+  font-size: var(--t-sm);
+}
+
+.drop-zone-active {
+  background: var(--c-accent-subtle) !important;
+  border: 1px dashed var(--c-accent) !important;
+}
+
+/* ===== OVERLAYS ===== */
+/* Shadows survive only where something genuinely floats above the page. */
+.ant-dropdown-menu,
+.ant-select-dropdown,
+.ant-picker-dropdown {
+  box-shadow: var(--shadow-overlay) !important;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md) !important;
+}
+
+.ant-modal-content {
+  box-shadow: var(--shadow-modal) !important;
+  border-radius: var(--r-md) !important;
+}
+
+/* ===== MISC ===== */
+.followup-calendar .ant-picker-calendar-date-content {
+  height: 40px !important;
+  overflow: hidden;
+}
+
+.calendar-badge {
+  font-size: var(--t-xs);
+}
+
+.text-muted { color: var(--c-text-muted); }
+.text-secondary { color: var(--c-text-secondary); }
+
+/* ===== ANIMATIONS ===== */
+/* The keyframes are retained because .fade-in is referenced by Layout, but
+   they no longer run on every navigation — content shouldn't slide in each
+   time you click a menu item. */
+.fade-in,
+.fade-in-up,
+.slide-in-left {
+  animation: none;
+}
+
+/* ===== RESPONSIVE ===== */
+/* Verified at 375 / 768 / 1280. */
+@media (max-width: 768px) {
+  .main-content {
+    padding: var(--s-4);
+  }
+
+  .topbar {
+    padding: 0 var(--s-4) !important;
+  }
+
+  /* First to go — the name is already on the avatar. */
+  .topbar-right .greeting-text {
+    display: none;
+  }
+
+  .topbar-left .page-title {
+    font-size: var(--t-base);
+  }
+
+  /* Both the AntD Statistic tiles and the hand-built ones (.kpi-value). */
+  .kpi-card .ant-statistic-content-value,
+  .kpi-value {
+    font-size: 22px;
+  }
+
+  .pipeline-container {
+    gap: var(--s-2);
+  }
+
+  .pipeline-column {
+    min-width: 260px;
+  }
+
+  .login-card .ant-card-body {
+    padding: var(--s-5);
+  }
+}
+
+@media (max-width: 576px) {
+  .main-content {
+    padding: var(--s-3);
+  }
+
+  /* Tables scroll horizontally rather than reflowing: the columns carry
+     meaning, and a squashed table is worse than a scrolled one. */
+  .premium-table .ant-table-tbody > tr > td,
+  .premium-table .ant-table-thead > tr > th {
+    padding: var(--s-2) !important;
+  }
+
+  .user-avatar-dropdown .user-name,
+  .user-avatar-dropdown .user-role {
+    display: none;
+  }
+}

@@ -1,0 +1,126 @@
+/**
+ * Design tokens — the single source of truth for the UI.
+ *
+ * Every colour, space, size and radius in the app should come from here.
+ * Nothing else should introduce a raw hex value or an ad-hoc pixel number.
+ *
+ * The palette is deliberately narrow: a neutral grey ramp, one restrained
+ * accent, and semantic colours reserved for state that a user must notice
+ * (overdue, failed, won). Colour carries meaning here — it is not decoration.
+ */
+
+:root {
+  /* ── Neutrals ────────────────────────────────────────────────────
+     A single ramp from page background to near-black text. Numbered by
+     lightness so intent is readable at the call site.                */
+  --c-bg: #ffffff;
+  --c-surface: #ffffff;
+  --c-neutral-50: #fafafa;
+  --c-neutral-100: #f5f5f5;
+  --c-neutral-200: #ebebeb;
+  --c-neutral-300: #e0e0e0;
+  --c-neutral-400: #b8b8b8;
+  --c-neutral-500: #8c8c8c;
+  --c-neutral-600: #6b6b6b;
+  --c-neutral-700: #4a4a4a;
+  --c-neutral-800: #2b2b2b;
+  --c-neutral-900: #171717;
+
+  /* ── Text ──────────────────────────────────────────────────────── */
+  --c-text: var(--c-neutral-900);
+  --c-text-secondary: var(--c-neutral-600);
+  --c-text-muted: var(--c-neutral-500);
+  --c-text-inverse: #ffffff;
+
+  /* ── Borders ───────────────────────────────────────────────────── */
+  --c-border: var(--c-neutral-200);
+  --c-border-strong: var(--c-neutral-300);
+
+  /* ── Accent ────────────────────────────────────────────────────────
+     Exactly one. Used for the active nav item, primary actions, focus
+     rings and links — nothing else.                                   */
+  --c-accent: #1f4d7a;
+  --c-accent-hover: #29618f;
+  --c-accent-subtle: #f0f4f8;
+  --c-accent-border: #cddbe8;
+
+  /* ── Semantic ──────────────────────────────────────────────────────
+     Reserved for state the user must act on. Muted on purpose: at full
+     saturation everything competes and nothing reads as urgent.       */
+  --c-success: #2e7d32;
+  --c-success-bg: #f1f8f2;
+  --c-warning: #a16207;
+  --c-warning-bg: #fdf8ec;
+  --c-danger: #b3261e;
+  --c-danger-bg: #fdf3f2;
+  --c-info: #1f4d7a;
+  --c-info-bg: #f0f4f8;
+
+  /* ── Spacing — 4px scale ─────────────────────────────────────────
+     Every margin/padding/gap picks from this. No ad-hoc values.     */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* ── Typography ──────────────────────────────────────────────────
+     One family. Five sizes, no more — if something needs a sixth, it
+     probably needs a different weight or colour instead.             */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --t-xs: 12px;   /* meta, table labels, captions */
+  --t-sm: 13px;   /* secondary body, dense tables */
+  --t-base: 14px; /* body — the default */
+  --t-lg: 18px;   /* section and page titles */
+  --t-xl: 28px;   /* KPI figures only */
+
+  --lh-tight: 1.3;   /* headings and numerals */
+  --lh-base: 1.6;    /* body copy — generous by default */
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* ── Radii ───────────────────────────────────────────────────────── */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-full: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────
+     Only two, and both are functional: they signal "this floats above
+     the page and will go away" (dropdowns, modals). Resting surfaces
+     get no shadow — separation comes from whitespace.                */
+  --shadow-overlay: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.14);
+
+  /* ── Focus ───────────────────────────────────────────────────────
+     Visible focus is an accessibility requirement, not decoration.   */
+  --focus-ring: 0 0 0 2px var(--c-accent-border);
+
+  /* ── Layout ──────────────────────────────────────────────────────── */
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 72px;
+  --topbar-h: 56px;
+
+  /* ── Motion ──────────────────────────────────────────────────────
+     Short and few. Transitions confirm a state change; they don't
+     perform.                                                          */
+  --motion-fast: 120ms ease;
+  --motion-base: 180ms ease;
+}
+
+/* Respect users who ask for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

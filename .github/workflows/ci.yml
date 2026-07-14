@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (migrations + API tests)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: insurance_crm
+        ports:
+          - 3306:3306
+        # Don't start the tests until MySQL is actually accepting connections.
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+      PORT: 5000
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: insurance_crm
+      DB_USER: root
+      DB_PASSWORD: root
+      JWT_SECRET: ci_only_jwt_secret_at_least_32_characters_long
+      JWT_EXPIRES_IN: 7d
+      # CI-only key. Real deployments generate their own.
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      FRONTEND_URL: http://localhost:5173
+      # The suite logs in far more than a human would; the default 30/15min
+      # cap would fail the run rather than catch an attack.
+      RATE_LIMIT_AUTH_MAX: 500
+      LOG_LEVEL: warn
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Verify migrations are reversible
+        working-directory: backend
+        # A migration that can't roll back is a one-way door in production.
+        run: |
+          npm run migrate:down
+          npm run migrate
+
+      - name: Start server
+        working-directory: backend
+        run: |
+          node server.js > /tmp/server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:5000/api/health > /dev/null; then
+              echo "Server is up."; exit 0
+            fi
+            sleep 1
+          done
+          echo "Server failed to start:"; cat /tmp/server.log; exit 1
+
+      - name: Check readiness probe
+        run: curl -sf http://127.0.0.1:5000/api/ready | tee /dev/stderr | grep -q '"status":"ready"'
+
+      - name: Run API tests
+        working-directory: backend
+        run: npm test
+
+      - name: Dump server log on failure
+        if: failure()
+        run: cat /tmp/server.log
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit backend
+        working-directory: backend
+        # Advisory, not blocking: a new transitive advisory shouldn't wedge
+        # every unrelated PR. Review the output.
+        run: npm audit --audit-level=high || true
+
+      - name: Audit frontend
+        working-directory: frontend
+        run: npm audit --audit-level=high || true
