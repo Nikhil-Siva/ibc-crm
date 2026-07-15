@@ -113,16 +113,24 @@ const Login = () => {
           <Link to="/signup" style={{ color: 'var(--c-accent)', fontSize: 13 }}>Create Account</Link>
         </div>
 
-        {/* Demo Credentials */}
-        <div className="demo-credentials">
-          <div className="demo-title">Demo Credentials</div>
-          <div style={{ marginTop: 4 }}>
-            <code>admin@insurancecrm.com</code>
-            <span style={{ margin: '0 6px', color: '#ccc' }}>|</span>
-            <code>Admin@123</code>
+        {/* Demo credentials are shown only when explicitly enabled, and never
+            in a production build. This block used to print the admin email and
+            password on the login screen unconditionally — on a public URL that
+            hands the whole CRM, including customer PAN/Aadhaar, to anyone who
+            opens the page. Set VITE_SHOW_DEMO_CREDENTIALS=true for a local demo. */}
+        {import.meta.env.DEV && import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true' && (
+          <div className="demo-credentials">
+            <div className="demo-title">Demo Credentials</div>
+            <div style={{ marginTop: 4 }}>
+              <code>admin@insurancecrm.com</code>
+              <span style={{ margin: '0 6px', color: 'var(--c-text-muted)' }}>|</span>
+              <code>Admin@123</code>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 'var(--t-xs)', color: 'var(--c-text-muted)' }}>
+              Telecaller: agent@insurancecrm.com | Agent@123
+            </div>
           </div>
-          <div style={{ marginTop: 6, fontSize: 11, color: '#aaa' }}>Telecaller: agent@insurancecrm.com | Agent@123</div>
-        </div>
+        )}
       </Card>
     </div>
   );
