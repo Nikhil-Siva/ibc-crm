@@ -77,8 +77,13 @@ export const AuthProvider = ({ children }) => {
         errorMsg = err.response.data?.message || errorMsg;
         console.error('[LOGIN] Server error response:', err.response.data);
       } else if (err.request) {
-        // No response received — server is likely not running
-        errorMsg = 'Cannot connect to server. Make sure the backend is running on port 5000.';
+        // The request went out but nothing came back. In production this is
+        // usually the API still waking from idle (free-tier hosts suspend it
+        // after inactivity, and the first request can exceed the axios
+        // timeout), or a CORS rejection. Telling the user to "start the
+        // backend on port 5000" — as this used to — is advice they can't act
+        // on and isn't true once deployed.
+        errorMsg = 'Could not reach the server. It may be waking up — please try again in a moment.';
       }
 
       return { success: false, error: errorMsg };
