@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Card, Form, Input, Button, Typography, Divider, Alert, Select } from 'antd';
+import { Card, Form, Input, Button, Typography, Divider, Alert } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
   LockOutlined,
   PhoneOutlined,
-  TeamOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +12,6 @@ import { Navigate, Link } from 'react-router-dom';
 import { message } from 'antd';
 
 const { Text } = Typography;
-const { Option } = Select;
 
 const Signup = () => {
   const { signup, isAuthenticated, loading: authLoading } = useAuth();
@@ -31,12 +29,15 @@ const Signup = () => {
     setLoading(true);
     setError('');
     try {
+      // No role is sent: POST /api/auth/register always creates a telecaller.
+      // Self-selecting a role on a public form is privilege escalation — the
+      // API ignores any role in the body. Admins are promoted from User
+      // Management by an existing admin.
       const result = await signup({
         name: values.name,
         email: values.email,
         mobile: values.mobile,
         password: values.password,
-        role: values.role || 'agent',
       });
       if (result.success) {
         message.success(result.message || 'Account created successfully. Please log in.');
@@ -83,7 +84,6 @@ const Signup = () => {
           size="large"
           className="login-form"
           autoComplete="off"
-          initialValues={{ role: 'agent' }}
         >
           {/* Full Name */}
           <Form.Item
@@ -162,16 +162,12 @@ const Signup = () => {
             />
           </Form.Item>
 
-          {/* Role */}
-          <Form.Item name="role" rules={[{ required: true }]}>
-            <Select
-              placeholder="Select Role"
-              suffixIcon={<TeamOutlined style={{ color: '#bbb' }} />}
-            >
-              <Option value="agent">Telecaller</Option>
-              <Option value="admin">Admin</Option>
-            </Select>
-          </Form.Item>
+          {/* No role picker: the API ignores a client-supplied role and always
+              creates a telecaller. Offering the choice here only produced an
+              account that silently wasn't what the user selected. */}
+          <Text type="secondary" style={{ fontSize: 'var(--t-xs)', display: 'block', marginBottom: 'var(--s-4)' }}>
+            New accounts are created as Telecaller. An admin can change your role afterwards.
+          </Text>
 
           <Form.Item style={{ marginBottom: 12 }}>
             <Button

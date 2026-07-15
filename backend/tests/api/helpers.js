@@ -6,6 +6,13 @@
  * jobs on require, so importing it would bind a port and never settle.
  */
 
+// Load .env so `npm test` works on its own, the way the README says it does.
+// Some tests need the same secrets the server was started with (CRON_SECRET,
+// for one) — without this they'd only pass when the caller happened to export
+// them by hand. CI sets these as real env vars, which take precedence, so this
+// changes nothing there.
+require('dotenv').config();
+
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:5000';
 
 const ADMIN = {
