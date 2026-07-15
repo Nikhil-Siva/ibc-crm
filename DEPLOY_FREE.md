@@ -19,17 +19,10 @@ limitation.
 
 ---
 
-## 1. Push the code to GitHub
+## 1. GitHub — done
 
-The repo is already initialized and committed locally. Create an empty repo at
-[github.com/new](https://github.com/new) (no README/gitignore/license — it's
-empty), then:
-
-```bash
-git remote add origin https://github.com/<your-username>/<repo-name>.git
-git branch -M main
-git push -u origin main
-```
+Code is live at [github.com/Nikhil-Siva/ibc-crm](https://github.com/Nikhil-Siva/ibc-crm),
+branch `main`. Both Render and Vercel below deploy straight from it.
 
 ## 2. Database — Clever Cloud (free MySQL)
 
