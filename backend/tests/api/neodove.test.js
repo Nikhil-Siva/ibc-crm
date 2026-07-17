@@ -514,6 +514,48 @@ test('contact-imports — full upload → process flow creates leads', async () 
   assert.equal(created.body.data.rows[0].mobile, mobile);
 });
 
+// The import UI once offered a "Phone" field that mapped to `phone`, which is
+// not a Lead column. `pick` dropped it silently, so every row failed with
+// "missing a mapped mobile number" and the whole import imported nothing. An
+// unmappable target must be rejected up front instead.
+test('contact-imports process — rejects a mapping to a non-column', async () => {
+  const csv = `Name,Phone\nBad Mapping Lead,9800000001\n`;
+  const form = new FormData();
+  form.append('file', new Blob([csv], { type: 'text/csv' }), 'bad-mapping.csv');
+
+  const upload = await request('POST', '/api/contact-imports/upload', {
+    token: adminToken,
+    body: form,
+    raw: true,
+  });
+  assert.equal(upload.status, 200);
+
+  const { status, body } = await request('POST', '/api/contact-imports/process', {
+    token: adminToken,
+    body: { importId: upload.body.data.id, mapping: { Name: 'name', Phone: 'phone' } },
+  });
+
+  assert.equal(status, 400);
+  assert.match(body.message, /unknown field/i);
+  assert.match(body.message, /phone/);
+});
+
+// The mapping step renders these; when the upload response omitted them the
+// preview table was silently empty for every file.
+test('contact-imports upload — returns preview rows keyed by header', async () => {
+  const csv = `Name,Mobile\nPreview Lead,9800000002\n`;
+  const form = new FormData();
+  form.append('file', new Blob([csv], { type: 'text/csv' }), 'preview.csv');
+
+  const { body } = await request('POST', '/api/contact-imports/upload', {
+    token: adminToken,
+    body: form,
+    raw: true,
+  });
+
+  assert.deepEqual(body.data.preview, [{ Name: 'Preview Lead', Mobile: '9800000002' }]);
+});
+
 test('contact-imports upload — rejects a non-spreadsheet file', async () => {
   const form = new FormData();
   form.append('file', new Blob(['not a spreadsheet'], { type: 'text/plain' }), 'notes.txt');
