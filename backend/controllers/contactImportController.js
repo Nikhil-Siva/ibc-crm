@@ -6,6 +6,9 @@ const path = require('path');
 const { readRows, UnsupportedFormatError } = require('../utils/spreadsheet');
 const fileStorage = require('../services/fileStorage');
 
+// The client marks columns it does not want imported with this sentinel.
+const SKIP_FIELD = '__skip__';
+
 const uploadContacts = async (req, res) => {
   try {
     if (!req.file) {
@@ -48,6 +51,15 @@ const uploadContacts = async (req, res) => {
     const headers = jsonData[0].map(h => (h ? String(h).trim() : ''));
     const totalRows = jsonData.length - 1;
 
+    // Sample rows for the mapping preview, keyed by header so the client can
+    // render them against the columns it already knows about.
+    const PREVIEW_ROWS = 5;
+    const preview = jsonData.slice(1, 1 + PREVIEW_ROWS).map((row) =>
+      Object.fromEntries(
+        headers.map((header, i) => [header, row[i] === undefined || row[i] === null ? '' : String(row[i])])
+      )
+    );
+
     // Only now — after the file has proven parseable — is it persisted, so
     // processImport (a later, separate request) can read it back. On a host
     // with an ephemeral filesystem (e.g. Render's free tier) this goes to
@@ -75,6 +87,7 @@ const uploadContacts = async (req, res) => {
         filename: importLog.filename,
         total_rows: totalRows,
         headers,
+        preview,
         status: importLog.status
       }
     });
@@ -90,6 +103,20 @@ const processImport = async (req, res) => {
 
     if (!importId || !mapping) {
       return res.status(400).json({ success: false, message: 'importId and mapping are required' });
+    }
+
+    // Reject unknown targets rather than letting `pick` drop them silently.
+    // A client that mapped a column to a non-column (e.g. 'phone' instead of
+    // 'mobile') otherwise got "row is missing a mapped mobile number" on every
+    // row — a whole failed import that blamed the user's file, not the mapping.
+    const unknownFields = [...new Set(Object.values(mapping))].filter(
+      (field) => field !== SKIP_FIELD && !LEAD_WRITABLE.includes(field)
+    );
+    if (unknownFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot map to unknown field(s): ${unknownFields.join(', ')}. Allowed: ${LEAD_WRITABLE.join(', ')}.`,
+      });
     }
 
     const importLog = await ContactImportLog.findByPk(importId);

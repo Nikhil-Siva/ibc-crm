@@ -11,23 +11,69 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../api/axios';
+import { downloadCsv } from '../utils/exportCsv';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 
+// `value` must match a Lead column exactly — the backend only accepts targets
+// in LEAD_WRITABLE (utils/validation.js) and rejects the import otherwise.
+// 'source' is deliberately absent: the backend stamps every imported lead
+// 'Other', so offering it would be a mapping that quietly does nothing.
 const CRM_FIELDS = [
   { label: 'Name', value: 'name' },
-  { label: 'Phone', value: 'phone' },
+  { label: 'Mobile', value: 'mobile' },
   { label: 'Email', value: 'email' },
   { label: 'Age', value: 'age' },
   { label: 'City', value: 'city' },
   { label: 'Occupation', value: 'occupation' },
-  { label: 'Source', value: 'source' },
   { label: 'Insurance Interest', value: 'insurance_interest' },
   { label: 'Priority', value: 'priority' },
   { label: 'Notes', value: 'notes' },
   { label: 'Skip', value: '__skip__' },
 ];
+
+// Header spellings a real sheet uses for each CRM field. Matched before the
+// looser substring pass so "Phone"/"Contact No" find `mobile`, which shares no
+// substring with either.
+const HEADER_SYNONYMS = {
+  name: ['name', 'fullname', 'customername', 'leadname', 'contactname'],
+  mobile: ['mobile', 'phone', 'phoneno', 'phonenumber', 'contact', 'contactno',
+    'contactnumber', 'mobileno', 'mobilenumber', 'cell', 'cellphone', 'whatsapp'],
+  email: ['email', 'emailid', 'emailaddress', 'mail'],
+  age: ['age'],
+  city: ['city', 'location', 'town'],
+  occupation: ['occupation', 'profession', 'job', 'designation'],
+  insurance_interest: ['insuranceinterest', 'interest', 'insurancetype', 'producttype'],
+  priority: ['priority'],
+  notes: ['notes', 'note', 'remarks', 'comment', 'comments'],
+};
+
+const normalizeHeader = (header) => String(header).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Best CRM field for a file column, or undefined when nothing fits. */
+const matchCrmField = (header) => {
+  const key = normalizeHeader(header);
+  if (!key) return undefined;
+
+  const exact = Object.keys(HEADER_SYNONYMS).find((field) =>
+    HEADER_SYNONYMS[field].includes(key)
+  );
+  if (exact) return exact;
+
+  // Fall back to containment, longest synonym first so "customer name" prefers
+  // `name` over a short accidental hit. Only the header may be the longer side:
+  // testing the synonym as a substring of a short header matched "e" to `email`.
+  let best;
+  for (const [field, synonyms] of Object.entries(HEADER_SYNONYMS)) {
+    for (const synonym of synonyms) {
+      if (key.includes(synonym) && (!best || synonym.length > best.length)) {
+        best = { field, length: synonym.length };
+      }
+    }
+  }
+  return best?.field;
+};
 
 const STATUS_BADGE_MAP = {
   processing: { color: 'blue', text: 'Processing' },
@@ -74,7 +120,8 @@ const ContactImport = () => {
     try {
       const res = await api.get('/campaigns', { params: { limit: 200 } });
       const data = res.data?.data || res.data;
-      const rows = data?.rows || (Array.isArray(data) ? data : []);
+      // The endpoint returns { campaigns, pagination }.
+      const rows = data?.campaigns || (Array.isArray(data) ? data : []);
       setCampaigns(rows);
     } catch {
       // Campaign list is optional, silently ignore
@@ -86,8 +133,9 @@ const ContactImport = () => {
     try {
       const res = await api.get('/contact-imports', { params: { page, limit: pageSize } });
       const data = res.data?.data || res.data;
-      const rows = data?.rows || (Array.isArray(data) ? data : []);
-      const count = data?.count ?? rows.length;
+      // The endpoint returns { imports, pagination: { total } }.
+      const rows = data?.imports || (Array.isArray(data) ? data : []);
+      const count = data?.pagination?.total ?? rows.length;
       setHistory(rows);
       setHistoryPagination((prev) => ({ ...prev, current: page, pageSize, total: count }));
     } catch {
@@ -130,17 +178,13 @@ const ContactImport = () => {
         filename: file.name,
       });
 
-      // Auto-map columns with intelligent matching
+      // Auto-map columns, first match wins so two headers never claim one field.
       const autoMapping = {};
       const headerList = data.headers || data.columns || [];
       headerList.forEach((header) => {
-        const lower = header.toLowerCase().replace(/[_\-\s]/g, '');
-        const match = CRM_FIELDS.find((f) => {
-          const fLower = f.value.toLowerCase().replace(/[_\-\s]/g, '');
-          return lower === fLower || lower.includes(fLower) || fLower.includes(lower);
-        });
-        if (match) {
-          autoMapping[header] = match.value;
+        const field = matchCrmField(header);
+        if (field && !Object.values(autoMapping).includes(field)) {
+          autoMapping[header] = field;
         }
       });
       setMapping(autoMapping);
@@ -158,11 +202,14 @@ const ContactImport = () => {
     }
   };
 
-  // Validate mapping - phone must be mapped
+  // Name and Mobile are both NOT NULL on Lead — the backend rejects every row
+  // without them, so catch it here rather than after a full failed import.
   const validateMapping = () => {
     const values = Object.values(mapping);
-    if (!values.includes('phone')) {
-      message.warning('Phone field must be mapped to proceed');
+    const missing = ['name', 'mobile'].filter((f) => !values.includes(f));
+    if (missing.length > 0) {
+      const labels = missing.map((f) => CRM_FIELDS.find((c) => c.value === f).label);
+      message.warning(`${labels.join(' and ')} must be mapped to proceed`);
       return false;
     }
     return true;
@@ -221,20 +268,28 @@ const ContactImport = () => {
     }
   };
 
-  // Download error log
+  // Download error log. The endpoint returns JSON — [{ row, data, error }] —
+  // so the CSV is built here rather than saving the raw response under a .csv
+  // name, which produced a file Excel could not open.
   const handleDownloadErrors = async () => {
     try {
-      const res = await api.get(`/contact-imports/${uploadResult.importId}/errors`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `import_errors_${uploadResult.importId}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      const res = await api.get(`/contact-imports/${uploadResult.importId}/errors`);
+      const errors = res.data?.data || [];
+      if (errors.length === 0) {
+        message.info('No errors to download');
+        return;
+      }
+      downloadCsv(
+        errors.map((e) => ({
+          Row: e.row,
+          Error: e.error,
+          // `data` is the raw sheet row; flatten it so each cell is readable.
+          ...Object.fromEntries(
+            (uploadResult.headers || []).map((h, i) => [h, e.data?.[i] ?? ''])
+          ),
+        })),
+        `import_errors_${uploadResult.importId}`
+      );
     } catch {
       message.error('Failed to download error log');
     }
@@ -332,16 +387,16 @@ const ContactImport = () => {
     },
     {
       title: 'Date',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
       render: (date) => date ? dayjs(date).format('DD MMM YYYY, h:mm A') : '-',
     },
     {
       title: 'Uploaded By',
-      dataIndex: 'uploaded_by_name',
-      key: 'uploaded_by_name',
-      render: (name, record) => name || record.user?.name || record.uploader?.name || '-',
+      dataIndex: ['uploader', 'name'],
+      key: 'uploader',
+      render: (name) => name || '-',
     },
     {
       title: 'Total Rows',
@@ -511,7 +566,7 @@ const ContactImport = () => {
           }
         >
           <Alert
-            message="Map your file columns to CRM fields. Phone field is required."
+            message="Map your file columns to CRM fields. Name and Mobile are required."
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
@@ -540,7 +595,8 @@ const ContactImport = () => {
             <Button
               type="primary"
               onClick={handleImport}
-              disabled={!validateMapping || importing}
+              loading={importing}
+              disabled={importing}
               style={{ background: 'var(--c-accent)' }}
             >
               Import Now
